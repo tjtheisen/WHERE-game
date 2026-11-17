@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>W.H.E.R.E. | The Great Retrieval</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Segoe UI", system-ui, sans-serif; background: #101528; color: #f7f5ef; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 85% 0%, #364060, transparent 34%), radial-gradient(circle at 5% 90%, #1c504f, transparent 32%), #101528; }
+    button { font: inherit; }
+    .page { max-width: 1500px; margin: auto; padding: 18px 26px 26px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 15px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #ffd86c; color: #263047; font-size: 26px; box-shadow: 0 4px 0 #b88d32; }
+    .eyebrow { color: #8fe6d0; font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+    h1 { margin: 2px 0 0; font-size: 30px; letter-spacing: .05em; line-height: 1; }
+    .header-note { color: #a7b3cd; text-align: right; font-size: 13px; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+    .panel { background: rgba(32, 42, 65, .94); border: 1px solid #465574; border-radius: 22px; padding: 18px; box-shadow: 0 18px 45px #080c1a55; }
+    .board-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .board-top h2 { margin: 0; font-size: 20px; }
+    .board-top p { margin: 3px 0 0; color: #b6c1d5; font-size: 12px; }
+    .badge { flex-shrink: 0; border-radius: 99px; padding: 7px 10px; color: #ffe192; background: #53482e; font-size: 11px; font-weight: 800; }
+    .house-wrap { position: relative; }
+    .house { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); border-radius: 10px; overflow: hidden; background: #729b77; }
+    .outside { aspect-ratio: 1.17; background: radial-gradient(circle at 35% 65%, #82a984 1px, transparent 2px) 0 0 / 19px 19px, #729b77; }
+    .entrance-label { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #172f25; font-size: clamp(8px, .8vw, 11px); font-weight: 900; line-height: 1.1; text-align: center; text-transform: uppercase; }
+    .entrance-label span { font-size: clamp(17px, 2vw, 25px); line-height: 1; }
+    .tile { position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 0; aspect-ratio: 1.17; padding: 0; border: 0; color: #24364a; cursor: pointer; }
+    .tile:hover:not(:disabled) { filter: brightness(1.09); }
+    .tile:disabled { opacity: 1; cursor: default; }
+    .tile:focus-visible, .action:focus-visible { outline: 3px solid #fff; outline-offset: -4px; z-index: 2; }
+    .tile.wall-right { border-right: 5px solid #78634c; }
+    .tile.wall-bottom { border-bottom: 5px solid #78634c; }
+    .tile.wall-top { border-top: 5px solid #78634c; }
+    .tile.wall-left { border-left: 5px solid #78634c; }
+    .tile.front-door::before { content: ""; position: absolute; z-index: 2; left: -5px; top: 28%; height: 44%; width: 5px; background: #ffd86c; }
+    .bedroom1 { background: #e6d3e2; }
+    .bedroom2 { background: #d6dfef; }
+    .bedroom3 { background: #e6d8c6; }
+    .hallway { background: repeating-linear-gradient(90deg, #ddc19d 0 23px, #d3b48e 24px 25px); }
+    .living { background: #cbe3d3; }
+    .kitchen { background: repeating-conic-gradient(#f1e4cc 0 25%, #e8d9be 0 50%) 0 0 / 28px 28px; }
+    .bath1, .bath2 { background: repeating-conic-gradient(#d3e9ee 0 25%, #c4e0e9 0 50%) 0 0 / 24px 24px; }
+    .dining { background: #f2dfbd; }
+    .laundry { background: #d7d9e8; }
+    .tile.reachable { box-shadow: inset 0 0 0 3px #f6bd4b; }
+    .tile.destination { box-shadow: inset 0 0 0 3px #71e9c2; }
+    .tile.selected { box-shadow: inset 0 0 0 4px #fff; }
+    .tile.hint { box-shadow: inset 0 0 0 4px #21a8e7; }
+    .tile.player { background-color: #ffe493; box-shadow: inset 0 0 0 3px #c28a24; }
+    .tile.requested { box-shadow: inset 0 0 0 3px #ffcd56; }
+    .tile.trap { background: repeating-linear-gradient(-45deg, #ae3030 0 9px, #db4941 9px 18px); }
+    .trap-label { position: absolute; top: 3px; left: 2px; right: 2px; z-index: 1; color: white; font-size: clamp(7px, .7vw, 9px); font-weight: 900; line-height: 1.05; text-align: center; text-shadow: 0 1px 2px #451010; }
+    .tile.trap-flashing { animation: danger-flash 1.8s steps(2, end) infinite; }
+    @keyframes danger-flash { 25%, 75% { background: #ff0808; box-shadow: inset 0 0 0 6px #fff; } 50% { background: #640000; } }
+    .bulk-badge { position: absolute; right: 2px; bottom: 2px; z-index: 2; padding: 1px 3px; border-radius: 3px; background: #4a3547; color: #ffe69a; font-size: 8px; font-weight: 900; }
+    .tile.lifted .icon { opacity: .14; }
+    .icon { z-index: 1; font-size: clamp(18px, 2.8vw, 36px); line-height: 1; filter: drop-shadow(0 2px 1px #594d4044); }
+    .item-name { z-index: 1; max-width: 100%; padding: 1px 3px; border-radius: 4px; background: #fffdf0c9; font-size: clamp(7px, .75vw, 10px); line-height: 1.1; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .room-label { position: absolute; top: 3px; left: 3px; z-index: 1; max-width: calc(100% - 5px); color: #314357; font-size: clamp(7px, .8vw, 10px); font-weight: 900; line-height: 1; text-transform: uppercase; letter-spacing: .02em; text-align: left; }
+    .robot-character { position: absolute; z-index: 3; width: clamp(27px, 3.5vw, 42px); pointer-events: none; transform: translate(-50%, -50%); filter: drop-shadow(0 3px 2px #17202d88); }
+    .robot-character svg { display: block; width: 100%; overflow: visible; }
+    .robot-character.walking svg { animation: robot-waddle .3s ease-in-out infinite alternate; }
+    @keyframes robot-waddle { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+    .robot-cargo { position: absolute; z-index: 4; pointer-events: none; transform: translate(0, -120%); font-size: clamp(16px, 2.3vw, 29px); line-height: 1; filter: drop-shadow(0 2px 1px #17202d88); }
+    .robot-cargo[hidden] { display: none; }
+    .confetti { position: absolute; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; }
+    .confetti span { position: absolute; top: -5%; left: var(--x); width: 9px; height: 15px; background: var(--color); opacity: 0; animation: confetti-fall 2.8s var(--delay) ease-in forwards; }
+    @keyframes confetti-fall { 0% { opacity: 1; transform: translateY(0) rotate(0); } 90% { opacity: 1; } 100% { opacity: 0; transform: translateY(80vh) rotate(540deg); } }
+    .legend { color: #c1ccdc; font-size: 12px; margin: 12px 0 0; line-height: 1.5; }
+    .legend strong { color: #ffe392; }
+    .sidebar h2 { margin: 4px 0 8px; font-size: 24px; line-height: 1.1; }
+    .intro, .steps { color: #d4ddeb; font-size: 13px; line-height: 1.45; }
+    .steps { padding-left: 19px; margin: 12px 0; }
+    .steps li { padding-left: 2px; margin-bottom: 7px; }
+    .controls { display: grid; gap: 8px; margin: 15px 0; }
+    .request-label { color: #d4ddeb; font-size: 13px; font-weight: 800; }
+    .request-select { width: 100%; padding: 10px; border: 1px solid #71829f; border-radius: 10px; color: #f7f5ef; background: #182237; font: inherit; }
+    .request-select:disabled { opacity: .65; }
+    .action { border: 0; border-radius: 10px; padding: 11px 14px; font-weight: 800; cursor: pointer; }
+    .action:disabled { opacity: .5; box-shadow: none; cursor: default; }
+    .primary { color: #172a2a; background: #8fe6d0; box-shadow: 0 4px 0 #4eaa95; }
+    .chaos-button { color: #3a2017; background: #ffbd80; box-shadow: 0 4px 0 #b96d46; }
+    .hint-button { color: #b6edff; background: #304c64; }
+    .secondary { color: #e4e9f2; background: #45516a; }
+    .stats { display: flex; gap: 8px; }
+    .stat { flex: 1; background: #182237; border-radius: 10px; padding: 9px 10px; }
+    .stat span { display: block; color: #aebbd0; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+    .stat strong { display: block; margin-top: 3px; font-size: 17px; }
+    .countdown { margin-top: 8px; }
+    .status { min-height: 67px; margin-top: 12px; padding: 11px; border-left: 3px solid #8fe6d0; background: #182237; border-radius: 4px 10px 10px 4px; font-size: 13px; line-height: 1.4; }
+    .delivery-report { margin-top: 12px; padding: 12px; border: 1px solid #8fe6d0; border-radius: 10px; background: #23483f; font-size: 13px; line-height: 1.4; }
+    .delivery-report strong { display: block; color: #ffe192; font-size: 16px; }
+    .delivery-report p { margin: 6px 0 0; }
+    .fine-print { margin: 12px 0 0; color: #a6b4ca; font-size: 11px; font-style: italic; line-height: 1.4; }
+    .trap-dialog { max-width: min(440px, 90vw); border: 3px solid #ff7e75; border-radius: 18px; padding: 24px; background: #3a151d; color: #fff3ef; text-align: center; box-shadow: 0 0 40px #ff322d77; }
+    .trap-dialog::backdrop { background: #1c0000aa; }
+    .trap-dialog h2 { margin: 5px 0; color: #ffb4a9; }
+    .trap-dialog p { line-height: 1.45; }
+    .trap-dialog a.action { display: inline-block; color: #172a2a; text-decoration: none; }
+    .roomba { font-size: 48px; }
+    @media (max-width: 850px) {
+      .page { padding: 14px; }
+      main { grid-template-columns: 1fr; }
+      .header-note { display: none; }
+      .sidebar { order: -1; }
+      .tile, .outside { aspect-ratio: 1.15; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+      .tile.trap-flashing { animation: none; box-shadow: inset 0 0 0 4px #ffb3a9; }
+      .robot-character.walking svg { animation: none; }
+      .confetti { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">⌂</div>
+        <div><div class="eyebrow">Whole-Home Efficiency &amp; Relocation Engine</div><h1>W.H.E.R.E.</h1></div>
+      </div>
+      <div class="header-note">Your home. Our decisions.<br><strong>Floor plan demo</strong></div>
+    </header>
+    <main>
+      <section class="panel" aria-labelledby="house-title">
+        <div class="board-top">
+          <div><h2 id="house-title">The great retrieval</h2><p>Three bedrooms. Two bathrooms. One extremely helpful robot.</p></div>
+          <div class="badge">LIVE DEMO</div>
+        </div>
+        <div class="house-wrap" id="house-wrap">
+          <div id="board" class="house" aria-label="Top-down house puzzle"></div>
+          <div id="robot" class="robot-character" aria-hidden="true">
+            <svg viewBox="0 0 60 66">
+              <path d="M30 11V5" stroke="#233448" stroke-width="4" stroke-linecap="round"></path>
+              <circle cx="30" cy="5" r="4" fill="#ff6c5e" stroke="#233448" stroke-width="2"></circle>
+              <path d="M12 36L5 43M48 36L55 43" stroke="#233448" stroke-width="6" stroke-linecap="round"></path>
+              <rect x="11" y="12" width="38" height="43" rx="10" fill="#ffd46a" stroke="#233448" stroke-width="4"></rect>
+              <rect x="16" y="19" width="28" height="18" rx="6" fill="#273c53"></rect>
+              <circle cx="24" cy="27" r="3" fill="#8fe6d0"></circle>
+              <circle cx="36" cy="27" r="3" fill="#8fe6d0"></circle>
+              <path d="M24 43 Q30 48 36 43" fill="none" stroke="#233448" stroke-width="3" stroke-linecap="round"></path>
+              <rect x="10" y="51" width="40" height="11" rx="5" fill="#34465b"></rect>
+              <circle cx="20" cy="56.5" r="2" fill="#a9bac9"></circle>
+              <circle cx="30" cy="56.5" r="2" fill="#a9bac9"></circle>
+              <circle cx="40" cy="56.5" r="2" fill="#a9bac9"></circle>
+            </svg>
+          </div>
+          <div id="cargo" class="robot-cargo" aria-hidden="true" hidden></div>
+          <div id="confetti" class="confetti" aria-hidden="true"></div>
+        </div>
+        <p class="legend"><strong>Gold:</strong> selectable item. <strong>Green:</strong> destination. <strong>BLOCK:</strong> furniture Floorbot cannot drive through. ✋ is you; the gold-outlined item is your request.</p>
+      </section>
+      <aside class="panel sidebar">
+        <div class="eyebrow">The problem we invented</div>
+        <h2>Just get your stuff.</h2>
+        <p class="intro">Stay put! Floorbot will deliver your requested item. Your house may be slightly rearranged in the process.</p>
+        <ol class="steps">
+          <li>Choose an item and press <strong>Bring me my...</strong> Floorbot checks the route there and back.</li>
+          <li>Click a gold-outlined item, then a green floor spot. Big items marked <strong>BLOCK</strong> obstruct Floorbot.</li>
+          <li>After each move, W.H.E.R.E. may relocate another item. Clear the route and Floorbot delivers your request!</li>
+          <li>Watch the red warning tile: Floorbot might accidentally drive over it.</li>
+        </ol>
+        <div class="controls">
+          <label class="request-label" for="request">What do you need?</label>
+          <select id="request" class="request-select">
+            <option value="keys">🔑 Keys — Bedroom 3</option>
+            <option value="phone">📱 Phone — Bedroom 2</option>
+            <option value="wallet">👛 Wallet — Living room</option>
+          </select>
+          <button id="find" class="action primary" type="button">🔎 Bring me my keys</button>
+          <button id="chaos" class="action chaos-button" type="button">🤖 Watch the chaos demo</button>
+          <button id="hint" class="action hint-button" type="button">💡 Ask the AI for a hint</button>
+          <button id="reset" class="action secondary" type="button">↺ Reset the house</button>
+        </div>
+        <p class="intro">Chaos demo runs automatically from a fresh house. The warning tile can still interrupt the show!</p>
+        <div class="stats">
+          <div class="stat"><span>Your moves</span><strong id="moves">0</strong></div>
+          <div class="stat"><span>Items relocated</span><strong id="shuffles">0</strong></div>
+        </div>
+        <div class="stat countdown"><span>System reshuffles remaining</span><strong id="countdown">—</strong></div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <section id="delivery-report" class="delivery-report" aria-live="polite" hidden>
+          <strong id="report-title"></strong>
+          <p id="report-details"></p>
+          <p>Household efficiency: questionable. Customer satisfaction: assumed.</p>
+        </section>
+        <p class="fine-print">W.H.E.R.E. is not responsible for the location of your furniture, your front door, or your sense of control.</p>
+      </aside>
+    </main>
+  </div>
+  <dialog id="trap-dialog" class="trap-dialog" role="alertdialog" aria-labelledby="trap-title" aria-describedby="trap-message">
+    <div class="roomba" aria-hidden="true">🤖🧹</div>
+    <h2 id="trap-title">UNAUTHORIZED FLOOR DETECTED</h2>
+    <p id="trap-message">Floorbot drove where it was specifically told not to. Fight the attack Roomba to resume the mission! The fight opens YouTube in a new tab.</p>
+    <a id="fight-roomba" class="action primary" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer" autofocus>Fight the attack Roomba</a>
+  </dialog>
+  <script>
+    const width = 11;
+    const height = 8;
+    const at = (row, column) => row * width + column;
+    const frontDoor = at(4, 1);
+    const robotStart = at(2, 7);
+    const roomCodes = {
+      A: "bedroom1", B: "bedroom2", C: "bedroom3", H: "hallway",
+      L: "living", K: "kitchen", W: "bath1", D: "dining", V: "bath2", U: "laundry",
+      ".": null
+    };
+    const roomRows = [
+      "..AAABBBCCC",
+      "..AAABBBCCC",
+      "..HHHHHHCCC",
+      ".LLLHHHWWWW",
+      ".LLLKKKWWWW",
+      ".LLLKKKDD..",
+      "..UUUVVDD..",
+      "...UUVV...."
+    ].map(row => [...row].map(code => roomCodes[code]));
+    const roomNames = {
+      bedroom1: "Bedroom 1", bedroom2: "Bedroom 2", bedroom3: "Bedroom 3",
+      hallway: "Hallway", living: "Living room", kitchen: "Kitchen",
+      bath1: "Bathroom 1", dining: "Dining room", bath2: "Bathroom 2", laundry: "Laundry"
+    };
+    const labels = new Map([
+      [at(0, 2), "Bedroom 1"], [at(0, 5), "Bedroom 2"], [at(0, 8), "Bedroom 3"], [at(2, 2), "Hallway"],
+      [at(3, 1), "Living room"], [at(4, 4), "Kitchen"], [at(3, 7), "Bathroom 1"],
+      [at(5, 7), "Dining room"], [at(6, 5), "Bathroom 2"], [at(6, 2), "Laundry"]
+    ]);
+    const edge = (a, b) => [Math.min(a, b), Math.max(a, b)].join("-");
+    const doors = new Set([
+      edge(at(1, 3), at(2, 3)), edge(at(1, 6), at(2, 6)), edge(at(2, 7), at(2, 8)),
+      edge(at(3, 3), at(3, 4)), edge(at(3, 5), at(4, 5)), edge(at(3, 6), at(3, 7)),
+      edge(at(4, 3), at(4, 4)), edge(at(5, 3), at(6, 3)), edge(at(5, 5), at(6, 5)),
+      edge(at(5, 6), at(5, 7)), edge(at(6, 4), at(6, 5))
+    ]);
+    // Change these items or their floor-plan positions to customize the house.
+    const startingFurniture = [
+      [at(0, 2), "bed1", "Bed", "🛏️"], [at(0, 4), "lamp", "Lamp", "💡"],
+      [at(1, 2), "books", "Books", "📚"],
+      [at(0, 5), "bed2", "Bed", "🛏️"], [at(0, 7), "plant", "Plant", "🪴"],
+      [at(1, 5), "clock", "Alarm clock", "⏰"],
+      [at(0, 8), "bed3", "Bed", "🛏️"], [at(2, 8), "dresser", "Dresser", "🗄️"],
+      [at(1, 8), "slippers", "Slippers", "🥿"],
+      [at(3, 1), "couch", "Couch", "🛋️"], [at(4, 1), "tv", "TV", "📺"],
+      [at(3, 2), "pillow", "Pillow", "🧸"], [at(2, 5), "bookshelf", "Bookshelf", "📚"],
+      [at(4, 4), "stove", "Stove", "🍳"], [at(3, 5), "fridge", "Fridge", "🧊"],
+      [at(5, 4), "coffee", "Coffee maker", "☕"], [at(5, 6), "pot", "Cooking pot", "🍲"],
+      [at(3, 8), "bath", "Bathtub", "🛁"], [at(4, 10), "toilet1", "Toilet", "🚽"],
+      [at(3, 9), "soap", "Soap", "🧼"],
+      [at(5, 7), "table", "Table", "🪑"], [at(6, 8), "cat", "Cat", "🐈"],
+      [at(5, 8), "chair", "Chair", "🪑"],
+      [at(6, 5), "shower", "Shower", "🚿"], [at(7, 6), "toilet2", "Toilet", "🚽"],
+      [at(7, 5), "paper", "Toilet paper", "🧻"],
+      [at(6, 2), "washer", "Washer", "🧺"], [at(7, 4), "toaster", "Toaster", "🍞"],
+      [at(6, 4), "detergent", "Detergent", "🧴"]
+    ];
+    const bulkyItems = new Set(["bed1", "bed2", "bed3", "dresser", "couch", "bookshelf", "fridge", "bath", "table", "washer"]);
+    const maxShuffles = 3;
+    const chaosRelocations = 8;
+    const requests = {
+      keys: { name: "keys", icon: "🔑", pronoun: "them", start: at(1, 9) },
+      phone: { name: "phone", icon: "📱", pronoun: "it", start: at(0, 6) },
+      wallet: { name: "wallet", icon: "👛", pronoun: "it", start: at(4, 3) }
+    };
+    const board = document.getElementById("board");
+    const houseWrap = document.getElementById("house-wrap");
+    const findButton = document.getElementById("find");
+    const chaosButton = document.getElementById("chaos");
+    const requestSelect = document.getElementById("request");
+    const hintButton = document.getElementById("hint");
+    const resetButton = document.getElementById("reset");
+    const status = document.getElementById("status");
+    const movesDisplay = document.getElementById("moves");
+    const shufflesDisplay = document.getElementById("shuffles");
+    const countdownDisplay = document.getElementById("countdown");
+    const robot = document.getElementById("robot");
+    const cargo = document.getElementById("cargo");
+    const confetti = document.getElementById("confetti");
+    const deliveryReport = document.getElementById("delivery-report");
+    const reportTitle = document.getElementById("report-title");
+    const reportDetails = document.getElementById("report-details");
+    const trapDialog = document.getElementById("trap-dialog");
+    let furniture;
+    let player;
+    let request;
+    let requestedPosition;
+    let phase;
+    let moves;
+    let relocations;
+    let shuffleCount;
+    let busy = false;
+    let hintIndex = null;
+    let selectedItem = null;
+    let chaosMode = false;
+    let trapTriggered = false;
+    let trapFlashing = false;
+    let trapTile = null;
+    let resumeAfterTrap = null;
+    let robotPosition = robotStart;
+
+    function roomFor(index) {
+      return index >= 0 && index < width * height ? roomRows[Math.floor(index / width)][index % width] : null;
+    }
+    function adjacent(a, b) {
+      return Math.abs(Math.floor(a / width) - Math.floor(b / width)) + Math.abs(a % width - b % width) === 1;
+    }
+    function canTravel(a, b) {
+      return roomFor(a) !== null && roomFor(b) !== null && adjacent(a, b)
+        && (roomFor(a) === roomFor(b) || doors.has(edge(a, b)));
+    }
+    function neighbors(index) {
+      return [index - width, index + width, index - 1, index + 1].filter(next => canTravel(index, next));
+    }
+    function say(message) { status.textContent = message; }
+
+    function chooseTrap(previous) {
+      const floors = Array.from({ length: width * height }, (_, i) => i).filter(i => roomFor(i) !== null);
+      const reserved = new Set([
+        at(2, 3), ...Object.values(requests).map(item => item.start), robotStart, frontDoor,
+        ...labels.keys(), ...startingFurniture.map(([index]) => index)
+      ]);
+      const candidates = floors.filter(candidate => {
+        if (reserved.has(candidate)) return false;
+        const seen = new Set([at(2, 3)]);
+        const queue = [...seen];
+        for (let cursor = 0; cursor < queue.length; cursor++) {
+          for (const next of neighbors(queue[cursor])) {
+            if (next !== candidate && !seen.has(next)) {
+              seen.add(next);
+              queue.push(next);
+            }
+          }
+        }
+        return seen.size === floors.length - 1;
+      });
+      if (candidates.length === 0) throw new Error("No safe location for the warning tile.");
+      const choices = candidates.length > 1 ? candidates.filter(index => index !== previous) : candidates;
+      return choices[Math.floor(Math.random() * choices.length)];
+    }
+
+    function isBlocked(index, layout) {
+      const item = layout.get(index);
+      return item !== undefined && bulkyItems.has(item.id);
+    }
+
+    function robotPath(start, destination, layout = furniture, allowBlockedDestination = false) {
+      const queue = [start];
+      const previous = new Map([[start, null]]);
+      for (let cursor = 0; cursor < queue.length; cursor++) {
+        const current = queue[cursor];
+        if (current === destination) {
+          const path = [];
+          for (let step = destination; step !== null; step = previous.get(step)) path.push(step);
+          return path.reverse();
+        }
+        for (const next of neighbors(current)) {
+          if (!previous.has(next) && (!isBlocked(next, layout) || (allowBlockedDestination && next === destination))) {
+            previous.set(next, current);
+            queue.push(next);
+          }
+        }
+      }
+      return null;
+    }
+
+    function destinationsFor(source, layout = furniture, position = robotPosition) {
+      if (!layout.has(source) || !robotPath(position, source, layout, true)) return [];
+      const remaining = new Map(layout);
+      const item = remaining.get(source);
+      remaining.delete(source);
+      const destinations = [];
+      for (let index = 0; index < width * height; index++) {
+        if (roomFor(index) === null || index === source || index === player || index === requestedPosition || index === trapTile || remaining.has(index)) continue;
+        if (!robotPath(source, index, remaining)) continue;
+        remaining.set(index, item);
+        const canLeave = robotPath(index, player, remaining) !== null;
+        remaining.delete(index);
+        if (canLeave) destinations.push(index);
+      }
+      return destinations;
+    }
+
+    // Prefer routes with fewer bulky obstructions, using distance only as a tiebreaker.
+    function leastBlockedPath(start, destination, layout = furniture) {
+      const costs = new Map([[start, 0]]);
+      const previous = new Map([[start, null]]);
+      const pending = new Set([start]);
+      while (pending.size) {
+        const current = [...pending].reduce((best, index) => costs.get(index) < costs.get(best) ? index : best);
+        pending.delete(current);
+        if (current === destination) {
+          const path = [];
+          for (let step = destination; step !== null; step = previous.get(step)) path.push(step);
+          return { path: path.reverse(), cost: costs.get(destination) };
+        }
+        for (const next of neighbors(current)) {
+          const cost = costs.get(current) + 1 + (isBlocked(next, layout) ? 100 : 0);
+          if (!costs.has(next) || cost < costs.get(next)) {
+            costs.set(next, cost);
+            previous.set(next, current);
+            pending.add(next);
+          }
+        }
+      }
+      return null;
+    }
+
+    function suggestedMove(layout = furniture, position = robotPosition, selected = selectedItem) {
+      const outgoing = leastBlockedPath(position, requestedPosition, layout);
+      const returning = leastBlockedPath(requestedPosition, player, layout);
+      if (!outgoing || !returning) return null;
+      const blockers = [...outgoing.path.slice(1), ...returning.path.slice(1)]
+        .filter(index => isBlocked(index, layout));
+      const source = selected ?? blockers.find(index => destinationsFor(index, layout, position).length > 0);
+      if (source === undefined || source === null) return null;
+      const options = destinationsFor(source, layout, position);
+      let best = null;
+      let bestCost = Infinity;
+      for (const destination of options) {
+        const nextLayout = new Map(layout);
+        const item = nextLayout.get(source);
+        nextLayout.delete(source);
+        nextLayout.set(destination, item);
+        const first = leastBlockedPath(destination, requestedPosition, nextLayout);
+        const second = leastBlockedPath(requestedPosition, player, nextLayout);
+        if (first && second && first.cost + second.cost < bestCost) {
+          best = destination;
+          bestCost = first.cost + second.cost;
+        }
+      }
+      return best === null ? null : { source, destination: best };
+    }
+
+    function planChaosDemo() {
+      let layout = new Map(furniture);
+      let position = robotPosition;
+      const plan = [];
+      const seen = new Set();
+      const moved = new Set();
+
+      function addMove(source, destination) {
+        const next = new Map(layout);
+        const item = next.get(source);
+        next.delete(source);
+        next.set(destination, item);
+        plan.push({ source, destination });
+        moved.add(item.id);
+        layout = next;
+        position = destination;
+      }
+
+      while (!robotPath(position, requestedPosition, layout) || !robotPath(requestedPosition, player, layout)) {
+        const state = `${position}:${[...layout].map(([index, item]) => `${index}:${item.id}`).sort().join(",")}`;
+        if (seen.has(state) || seen.size >= 30) throw new Error("The demo could not plan a clear delivery route.");
+        seen.add(state);
+        const move = suggestedMove(layout, position, null);
+        if (!move) throw new Error("The demo could not find a safe way to clear the route.");
+        addMove(move.source, move.destination);
+      }
+
+      for (let step = 0; step < chaosRelocations; step++) {
+        const sources = [...layout.keys()].sort((a, b) => {
+          const score = index => (isBlocked(index, layout) ? 2 : 0) + (moved.has(layout.get(index).id) ? 0 : 4);
+          return score(b) - score(a);
+        });
+        let choice = null;
+        for (const source of sources) {
+          const options = destinationsFor(source, layout, position).sort((a, b) =>
+            Number(roomFor(b) !== roomFor(source)) - Number(roomFor(a) !== roomFor(source)));
+          for (const destination of options) {
+            const next = new Map(layout);
+            next.set(destination, next.get(source));
+            next.delete(source);
+            if (robotPath(destination, requestedPosition, next) && robotPath(requestedPosition, player, next)) {
+              choice = { source, destination };
+              break;
+            }
+          }
+          if (choice) break;
+        }
+        if (!choice) throw new Error("The demo could not plan enough safe rearrangements.");
+        addMove(choice.source, choice.destination);
+      }
+      return plan;
+    }
+
+    function render() {
+      board.replaceChildren();
+      const destinations = selectedItem === null ? [] : destinationsFor(selectedItem);
+      for (let index = 0; index < width * height; index++) {
+        if (roomFor(index) === null) {
+          const outside = document.createElement("div");
+          outside.className = `outside${index === frontDoor - 1 ? " entrance-label" : ""}`;
+          outside.setAttribute("aria-hidden", "true");
+          if (index === frontDoor - 1) {
+            const icon = document.createElement("span");
+            icon.textContent = "🚪 →";
+            outside.append(icon, document.createTextNode("Front door"));
+          }
+          board.append(outside);
+          continue;
+        }
+        const tile = document.createElement("button");
+        const item = index === player ? { name: phase === "won" ? `You + ${request.name}` : "You", icon: phase === "won" ? "🙌" : "✋" }
+          : index === requestedPosition ? { name: `Your ${request.name}`, icon: request.icon } : furniture.get(index);
+        const reachable = phase === "playing" && !busy && furniture.has(index)
+          && robotPath(robotPosition, index, furniture, true) !== null;
+        const destination = phase === "playing" && !busy && destinations.includes(index);
+        const rightWall = index % width === width - 1 || (roomFor(index) !== roomFor(index + 1) && !doors.has(edge(index, index + 1)));
+        const bottomWall = roomFor(index) !== roomFor(index + width) && !doors.has(edge(index, index + width));
+        const topWall = roomFor(index - width) === null;
+        const leftWall = index % width === 0 || roomFor(index - 1) === null;
+        tile.type = "button";
+        tile.dataset.index = index;
+        const bulky = item && bulkyItems.has(item.id);
+        tile.className = `tile ${roomFor(index)}${rightWall ? " wall-right" : ""}${bottomWall ? " wall-bottom" : ""}${topWall ? " wall-top" : ""}${leftWall ? " wall-left" : ""}${index === frontDoor ? " front-door" : ""}${index === trapTile ? " trap" : ""}${index === trapTile && trapFlashing ? " trap-flashing" : ""}${index === player ? " player" : ""}${index === requestedPosition ? " requested" : ""}${reachable && selectedItem === null ? " reachable" : ""}${destination ? " destination" : ""}${selectedItem === index ? " selected" : ""}${hintIndex === index ? " hint" : ""}`;
+        tile.disabled = busy || phase === "won" || index === player;
+        tile.setAttribute("aria-label", `${item ? item.name : "Open floor"}, ${roomNames[roomFor(index)]}${index === frontDoor ? ", front door on west wall, landmark only" : ""}${index === trapTile ? ", do not come here" : ""}${bulky ? ", blocks Floorbot" : ""}${reachable ? ", selectable item" : ""}${destination ? ", valid destination" : ""}${selectedItem === index ? ", selected" : ""}${hintIndex === index ? ", suggested move" : ""}`);
+        if (index === trapTile) {
+          const warning = document.createElement("span");
+          warning.className = "trap-label";
+          warning.textContent = "DO NOT COME HERE";
+          tile.append(warning);
+        }
+        if (labels.has(index)) {
+          const label = document.createElement("span");
+          label.className = "room-label";
+          label.textContent = labels.get(index);
+          tile.append(label);
+        }
+        if (item) {
+          const icon = document.createElement("span");
+          icon.className = "icon";
+          icon.setAttribute("aria-hidden", "true");
+          icon.textContent = item.icon;
+          const name = document.createElement("span");
+          name.className = "item-name";
+          name.textContent = item.name;
+          tile.append(icon, name);
+        }
+        if (bulky) {
+          const badge = document.createElement("span");
+          badge.className = "bulk-badge";
+          badge.textContent = "BLOCK";
+          badge.setAttribute("aria-hidden", "true");
+          tile.append(badge);
+        }
+        tile.addEventListener("click", () => selectTile(index));
+        board.append(tile);
+      }
+      movesDisplay.textContent = moves;
+      shufflesDisplay.textContent = relocations;
+      countdownDisplay.textContent = phase !== "playing" ? "—"
+        : chaosMode ? "CHAOS MODE!"
+        : shuffleCount >= maxShuffles ? "AI overheated!"
+        : String(maxShuffles - shuffleCount);
+      findButton.disabled = phase !== "ready" || busy;
+      chaosButton.disabled = phase !== "ready" || busy;
+      findButton.textContent = `🔎 Bring me my ${request.name}`;
+      requestSelect.disabled = phase !== "ready" || busy;
+      hintButton.disabled = phase !== "playing" || busy;
+      resetButton.disabled = busy;
+      positionRobot(robotPosition);
+    }
+
+    function cellCenter(index) {
+      const tile = board.querySelector(`[data-index="${index}"]`);
+      if (!tile) throw new Error("The robot's floor position is not available.");
+      const bounds = houseWrap.getBoundingClientRect();
+      const rect = tile.getBoundingClientRect();
+      return { x: rect.left - bounds.left + rect.width / 2, y: rect.top - bounds.top + rect.height / 2 };
+    }
+    function placeRobot(x, y) {
+      robot.style.left = `${x}px`;
+      robot.style.top = `${y}px`;
+      cargo.style.left = `${x}px`;
+      cargo.style.top = `${y}px`;
+    }
+    function positionRobot(index) {
+      const point = cellCenter(index);
+      placeRobot(point.x, point.y);
+      robot.dataset.tile = index;
+    }
+    function animateSegment(from, to, duration, onFrame) {
+      return new Promise(resolve => {
+        let start;
+        function frame(time) {
+          if (start === undefined) start = time;
+          const progress = Math.min((time - start) / duration, 1);
+          const eased = progress * progress * (3 - 2 * progress);
+          onFrame(from.x + (to.x - from.x) * eased, from.y + (to.y - from.y) * eased);
+          if (progress < 1) requestAnimationFrame(frame);
+          else resolve();
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+    function scenicRobotPath(start, destination, allowBlockedDestination) {
+      let best = robotPath(start, destination, furniture, allowBlockedDestination);
+      if (!best) return null;
+      for (let waypoint = 0; waypoint < width * height; waypoint++) {
+        if (roomFor(waypoint) === null || waypoint === destination) continue;
+        const first = robotPath(start, waypoint);
+        if (!first || first.slice(1).includes(destination)) continue;
+        const second = robotPath(waypoint, destination, furniture, allowBlockedDestination);
+        if (second && first.length + second.length - 1 > best.length) {
+          best = first.concat(second.slice(1));
+        }
+      }
+      return best;
+    }
+    async function walkRobotTo(destination, allowBlockedDestination = false) {
+      const path = chaosMode
+        ? scenicRobotPath(robotPosition, destination, allowBlockedDestination)
+        : robotPath(robotPosition, destination, furniture, allowBlockedDestination);
+      if (!path) throw new Error("Floorbot cannot reach its destination.");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reducedMotion) robot.classList.add("walking");
+      for (const next of path.slice(1)) {
+        if (!reducedMotion) {
+          const from = cellCenter(robotPosition);
+          const to = cellCenter(next);
+          await animateSegment(from, to, 140, placeRobot);
+        }
+        robotPosition = next;
+        if (reducedMotion) positionRobot(next);
+        else robot.dataset.tile = next;
+        if (next === trapTile && !trapTriggered) {
+          trapTriggered = true;
+          trapFlashing = true;
+          board.querySelector(`[data-index="${trapTile}"]`).classList.add("trap-flashing");
+          robot.classList.remove("walking");
+          await new Promise(resolve => {
+            resumeAfterTrap = resolve;
+            trapDialog.showModal();
+          });
+          if (!reducedMotion) robot.classList.add("walking");
+        }
+      }
+      robot.classList.remove("walking");
+    }
+    async function animateGrab(fromIndex, toIndex, icon) {
+      await walkRobotTo(fromIndex);
+      const fromTile = board.querySelector(`[data-index="${fromIndex}"]`);
+      cargo.textContent = icon;
+      cargo.hidden = false;
+      fromTile.classList.add("lifted");
+      await walkRobotTo(toIndex);
+      cargo.hidden = true;
+      fromTile.classList.remove("lifted");
+    }
+
+    function runAction(action) {
+      if (busy) return;
+      busy = true;
+      hintIndex = null;
+      render();
+      action().then(result => {
+        busy = false;
+        render();
+        if (result.focus === "reset") resetButton.focus();
+        else if (typeof result.focus === "number") board.querySelector(`[data-index="${result.focus}"]`)?.focus();
+      }).catch(error => {
+        busy = false;
+        robot.classList.remove("walking");
+        cargo.hidden = true;
+        render();
+        console.error("W.H.E.R.E. could not complete its move:", error);
+        say("The robot malfunctioned. Please reset the house and try again.");
+      });
+    }
+
+    async function moveFurniture(from, to) {
+      const item = furniture.get(from);
+      await walkRobotTo(from, true);
+      const fromTile = board.querySelector(`[data-index="${from}"]`);
+      cargo.textContent = item.icon;
+      cargo.hidden = false;
+      fromTile.classList.add("lifted");
+      furniture.delete(from);
+      await walkRobotTo(to);
+      cargo.hidden = true;
+      fromTile.classList.remove("lifted");
+      furniture.set(to, item);
+      relocations++;
+      render();
+    }
+    async function shuffleOneItem() {
+      const outgoing = leastBlockedPath(robotPosition, requestedPosition);
+      const returning = leastBlockedPath(requestedPosition, player);
+      if (!outgoing || !returning) throw new Error("The house route could not be calculated.");
+      const route = [...new Set([...outgoing.path, ...returning.path])];
+      const originalBlocks = [...outgoing.path.slice(1), ...returning.path.slice(1)]
+        .filter(index => isBlocked(index, furniture)).length;
+      for (const source of furniture.keys()) {
+        if (!isBlocked(source, furniture) || route.includes(source)) continue;
+        const valid = new Set(destinationsFor(source));
+        for (const destination of route) {
+          if (!valid.has(destination)) continue;
+          const layout = new Map(furniture);
+          const item = layout.get(source);
+          layout.delete(source);
+          layout.set(destination, item);
+          const nextOut = leastBlockedPath(destination, requestedPosition, layout);
+          const nextBack = leastBlockedPath(requestedPosition, player, layout);
+          if (!nextOut || !nextBack) continue;
+          const nextBlocks = [...nextOut.path.slice(1), ...nextBack.path.slice(1)]
+            .filter(index => isBlocked(index, layout)).length;
+          if (nextBlocks > originalBlocks) {
+            say(`Floorbot: "Optimizing the route!" Moving your ${item.name.toLowerCase()} directly into it...`);
+            await moveFurniture(source, destination);
+            shuffleCount++;
+            return;
+          }
+        }
+      }
+      const choices = [...furniture.keys()].filter(index => !isBlocked(index, furniture)
+        && destinationsFor(index).length > 0);
+      if (choices.length === 0) {
+        say("W.H.E.R.E. found no safe place to reshuffle an item.");
+        return;
+      }
+      const from = choices[(moves + shuffleCount) % choices.length];
+      const options = destinationsFor(from);
+      const otherRooms = options.filter(index => roomFor(index) !== roomFor(from));
+      const destinations = otherRooms.length ? otherRooms : options;
+      const to = destinations[(moves * 7 + shuffleCount) % destinations.length];
+      const item = furniture.get(from);
+      say(`Floorbot: "Everything has a place. I picked a new one!" Moving your ${item.name.toLowerCase()} to the ${roomNames[roomFor(to)].toLowerCase()}...`);
+      await moveFurniture(from, to);
+      shuffleCount++;
+    }
+
+    async function attemptDelivery() {
+      if (!robotPath(robotPosition, requestedPosition) || !robotPath(requestedPosition, player)) {
+        say(`Floorbot: "A minor obstacle to perfection!" Clear a route to your ${request.name} and back.`);
+        return false;
+      }
+      say(`Floorbot: "Mission almost accomplished!" Collecting your ${request.name} and bringing ${request.pronoun} to you.`);
+      await animateGrab(requestedPosition, player, request.icon);
+      requestedPosition = -1;
+      phase = "won";
+      say(`Delivered! Your ${request.name} arrived. Floorbot accepts all the credit.`);
+      celebrateDelivery();
+      return true;
+    }
+
+    function celebrateDelivery() {
+      reportTitle.textContent = `${request.icon} Your ${request.name} arrived!`;
+      reportDetails.textContent = `${moves} player ${moves === 1 ? "move" : "moves"}, ${relocations} total ${relocations === 1 ? "item relocated" : "items relocated"}, including ${shuffleCount} system ${shuffleCount === 1 ? "reshuffle" : "reshuffles"}.`;
+      deliveryReport.hidden = false;
+      const colors = ["#ffd86c", "#8fe6d0", "#ff8277", "#a7eaff"];
+      for (let i = 0; i < 24; i++) {
+        const piece = document.createElement("span");
+        piece.style.setProperty("--x", `${(i * 37) % 100}%`);
+        piece.style.setProperty("--delay", `${(i % 6) * .12}s`);
+        piece.style.setProperty("--color", colors[i % colors.length]);
+        confetti.append(piece);
+      }
+    }
+
+    function selectTile(index) {
+      if (phase === "ready") {
+        say(`First, press Bring me my ${request.name} and let W.H.E.R.E. work its magic.`);
+        return;
+      }
+      if (phase !== "playing" || busy) return;
+      if (furniture.has(index)) {
+        if (selectedItem === index) {
+          selectedItem = null;
+          hintIndex = null;
+          render();
+          say("Selection cleared. Choose an item for Floorbot to move.");
+          return;
+        }
+        if (destinationsFor(index).length === 0) {
+          say("Floorbot can't reach or safely relocate that item yet. Try another highlighted item.");
+          return;
+        }
+        selectedItem = index;
+        hintIndex = null;
+        render();
+        say(`Selected ${furniture.get(index).name}. Click a green floor spot to move it, or click the item again to cancel.`);
+        return;
+      }
+      if (selectedItem === null) {
+        say("Choose a gold-outlined item first, then choose a green floor spot.");
+        return;
+      }
+      if (!destinationsFor(selectedItem).includes(index)) {
+        say("Floorbot can't safely place the item there. Choose a green floor spot.");
+        return;
+      }
+      const source = selectedItem;
+      selectedItem = null;
+      runAction(async () => {
+        const messages = [
+          `"I have a system. You wouldn't understand it."`,
+          `"Please stand by while I improve your floor."`,
+          `"Moving things is practically the same as organizing!"`
+        ];
+        say(`Floorbot: ${messages[moves % messages.length]} Moving your ${furniture.get(source).name.toLowerCase()}...`);
+        await moveFurniture(source, index);
+        moves++;
+        if (shuffleCount < maxShuffles) await shuffleOneItem();
+        const delivered = await attemptDelivery();
+        return { focus: delivered ? "reset" : null };
+      });
+    }
+
+    requestSelect.addEventListener("change", () => {
+      request = requests[requestSelect.value];
+      requestedPosition = request.start;
+      render();
+      say(`Ready when you are. Press Bring me my ${request.name} to begin.`);
+    });
+    findButton.addEventListener("click", () => {
+      runAction(async () => {
+        phase = "playing";
+        const delivered = await attemptDelivery();
+        return { focus: delivered ? "reset" : null };
+      });
+    });
+    chaosButton.addEventListener("click", () => {
+      runAction(async () => {
+        chaosMode = true;
+        phase = "playing";
+        render();
+        say(`Floorbot: "Why take the direct route to your ${request.name} when I can improve the whole house?"`);
+        const plan = planChaosDemo();
+        for (const [index, move] of plan.entries()) {
+          const item = furniture.get(move.source);
+          say(`Floorbot: "Optimization ${index + 1} of ${plan.length}!" Moving your ${item.name.toLowerCase()} to the ${roomNames[roomFor(move.destination)].toLowerCase()}...`);
+          await moveFurniture(move.source, move.destination);
+          shuffleCount++;
+        }
+        const delivered = await attemptDelivery();
+        if (!delivered) throw new Error("The demo's planned delivery route became blocked.");
+        return { focus: "reset" };
+      });
+    });
+    hintButton.addEventListener("click", () => {
+      const suggestion = suggestedMove();
+      if (!suggestion) {
+        say("The AI couldn't find a safe move. Select another item or reset the house.");
+        return;
+      }
+      hintIndex = selectedItem === null ? suggestion.source : suggestion.destination;
+      render();
+      say(selectedItem === null
+        ? `AI suggestion: select the blue-outlined ${furniture.get(hintIndex).name}.`
+        : `AI suggestion: move ${furniture.get(selectedItem).name} to the blue-outlined floor spot.`);
+      board.querySelector(`[data-index="${hintIndex}"]`)?.focus();
+    });
+    function stopTrapFlash() {
+      trapFlashing = false;
+      board.querySelector(".trap-flashing")?.classList.remove("trap-flashing");
+    }
+    document.getElementById("fight-roomba").addEventListener("click", () => {
+      if (!resumeAfterTrap) throw new Error("No Floorbot mission is waiting for the Roomba.");
+      const resume = resumeAfterTrap;
+      resumeAfterTrap = null;
+      stopTrapFlash();
+      trapDialog.close();
+      resume();
+    });
+    trapDialog.addEventListener("cancel", event => event.preventDefault());
+    trapDialog.addEventListener("close", stopTrapFlash);
+    window.addEventListener("resize", () => {
+      if (!busy) positionRobot(robotPosition);
+    });
+    resetButton.addEventListener("click", reset);
+    function reset() {
+      furniture = new Map(startingFurniture.map(([index, id, name, icon]) => [index, { id, name, icon }]));
+      player = at(2, 3);
+      request = requests[requestSelect.value];
+      requestedPosition = request.start;
+      phase = "ready";
+      moves = 0;
+      relocations = 0;
+      shuffleCount = 0;
+      hintIndex = null;
+      selectedItem = null;
+      chaosMode = false;
+      trapTriggered = false;
+      trapFlashing = false;
+      trapTile = chooseTrap(trapTile);
+      robotPosition = robotStart;
+      cargo.hidden = true;
+      deliveryReport.hidden = true;
+      confetti.replaceChildren();
+      robot.classList.remove("walking");
+      if (trapDialog.open) trapDialog.close();
+      render();
+      say(`Ready when you are. Press Bring me my ${request.name} to begin.`);
+    }
+    reset();
+  </script>
+</body>
+</html>
